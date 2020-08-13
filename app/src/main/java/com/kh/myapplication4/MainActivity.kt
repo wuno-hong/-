@@ -42,39 +42,22 @@ class MainActivity : AppCompatActivity() {
     val APP_ID = "21784024"
     val API_KEY = "0n0F7yyZEu71oHKXAE7mAkxA"
     val SECRET_KEY = "c8CzgdESxq4G146L9LQHY2iezA2LWoIj"
-    var resultCode: Int = 0
     var imagePath: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_main)
-        //隐藏标题栏
-        /*if (getSupportActionBar() != null){
-            getSupportActionBar()?.hide();
-        }*/
-        //隐藏状态栏
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        //////
+        //持久化存储
         val editor = getSharedPreferences("data", Context.MODE_PRIVATE).edit()
         editor.putString("天空", "关于天空的文案")
         editor.apply()
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                1
-            )
+        //存储许可
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 1)
         }
-        if (Build.VERSION.SDK_INT > 9) {
-            val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
-            StrictMode.setThreadPolicy(policy)
-        }
-        val client = AipImageClassify(APP_ID, API_KEY, SECRET_KEY)
+        //允许主线程访问网络
+        val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
+        StrictMode.setThreadPolicy(policy)
         takePhotoBtn.setOnClickListener {
             // 创建File对象，用于存储拍照后的图片
             outputImage = File(externalCacheDir, "output_image.jpg")
@@ -83,11 +66,7 @@ class MainActivity : AppCompatActivity() {
             }
             outputImage.createNewFile()
             imageUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                FileProvider.getUriForFile(
-                    this,
-                    "com.example.cameraalbumtest.fileprovider",
-                    outputImage
-                );
+                FileProvider.getUriForFile(this, "com.example.cameraalbumtest.fileprovider", outputImage);
             } else {
                 Uri.fromFile(outputImage);
             }
@@ -111,12 +90,9 @@ class MainActivity : AppCompatActivity() {
             val client = AipImageClassify(APP_ID, API_KEY, SECRET_KEY)
             if (imagePath != null) {
                 val res = client.advancedGeneral(imagePath, options)
-                Log.d("test", res.toString(2))
                 val key = res.getJSONArray("result").getJSONObject(0).getString("keyword")
-                Log.d("test", key)
                 val prefs = getSharedPreferences("data", Context.MODE_PRIVATE)
                 val value = prefs.getString(key, "")
-                Log.d("test", value)
                 textView1.text = "检测到的对象：" + key
                 textView2.text = "为您提供的文案：" + value
 
@@ -131,8 +107,7 @@ class MainActivity : AppCompatActivity() {
             takePhoto -> {
                 if (resultCode == Activity.RESULT_OK) {
                     // 将拍摄的照片显示出来
-                    val bitmap =
-                        BitmapFactory.decodeStream(contentResolver.openInputStream(imageUri))
+                    val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(imageUri))
                     imageView.setImageBitmap(rotateIfRequired(bitmap))
                     imagePath = outputImage.getPath()
                 }
@@ -144,24 +119,18 @@ class MainActivity : AppCompatActivity() {
                             val docId = DocumentsContract.getDocumentId(uri)
                             if ("com.android.providers.media.documents" == uri.authority) { //Log.d(TAG, uri.toString());
                                 val id = docId.split(":").toTypedArray()[1]
-                                val selection =
-                                    MediaStore.Images.Media._ID + "=" + id
+                                val selection = MediaStore.Images.Media._ID + "=" + id
                                 imagePath = getImagePath(
                                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                                     selection
                                 )
                             } else if ("com.android.providers.downloads.documents" == uri.authority) { //Log.d(TAG, uri.toString());
-                                val contentUri = ContentUris.withAppendedId(
-                                    Uri.parse("content://downloads/public_downloads"),
+                                val contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"),
                                     java.lang.Long.valueOf(docId)
                                 )
                                 imagePath = getImagePath(contentUri, null)
                             }
-                        } else if ("content".equals(
-                                uri.scheme,
-                                ignoreCase = true
-                            )
-                        ) { //Log.d(TAG, "content: " + uri.toString());
+                        } else if ("content".equals(uri.scheme, ignoreCase = true)) {
                             imagePath = getImagePath(uri, null)
                         }
                         // 将选择的照片显示
